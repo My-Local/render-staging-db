@@ -1,5 +1,6 @@
 services:
 - type: pserv
+  region: frankfurt
   name: mysql
   plan: standard
   env: docker
