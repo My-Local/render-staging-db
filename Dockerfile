@@ -5,9 +5,9 @@ FROM --platform=linux/amd64 mysql:8-debian
 RUN groupadd --gid 1000 node \
   && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
 
-ENV NODE_VERSION 18.13.0
+ENV NODE_VERSION 18.12.0
 
-RUN apt-get update && apt-get install -y --no-install-recommends curl
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
   && case "${dpkgArch##*-}" in \
     amd64) ARCH='x64';; \
@@ -31,8 +31,7 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
     108F52B48DB57BB0CC439B2997B01419BD92F80A \
   ; do \
-      gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
-      gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
+      gpg --batch --keyserver "hkp://keyserver.ubuntu.com:80" --recv-keys "$key" ; \
   done \
   && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-$ARCH.tar.xz" \
   && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
@@ -45,28 +44,15 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
   && node --version \
   && npm --version
 
-ENV YARN_VERSION 1.22.19
-
-RUN set -ex \
-  && for key in \
-    6A010C5166006599AA17F08146C2130DFD2497F5 \
-  ; do \
-    gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
-    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
-  done \
-  && curl -fsSLO --compressed "https://yarnpkg.com/downloads/$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz" \
-  && curl -fsSLO --compressed "https://yarnpkg.com/downloads/$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz.asc" \
-  && gpg --batch --verify yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
-  && mkdir -p /opt \
-  && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/ \
-  && ln -s /opt/yarn-v$YARN_VERSION/bin/yarn /usr/local/bin/yarn \
-  && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
-  && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
-  # smoke test
-  && yarn --version
+RUN npm install pm2 -g
 
 COPY config/user.cnf /etc/mysql/my.cnf
-# todo fixme
-CMD "pm2 start ./backup-script/backup.js"
+
+RUN mkdir /backup
+WORKDIR /backup
+COPY backup-script/* /backup/
+RUN npm install
+
+CMD ["pm2-runtime", "start", "backup.js", "--cron", "* * * * *"]
 
 EXPOSE 3306
