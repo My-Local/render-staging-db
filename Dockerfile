@@ -1,6 +1,6 @@
 # You can change this to a newer version of MySQL available at
 # https://hub.docker.com/r/mysql/mysql-server/tags/
-FROM --platform=linux/amd64 mysql:8-debian
+FROM mysql:8-debian
 
 RUN groupadd --gid 1000 node \
   && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
@@ -53,6 +53,6 @@ WORKDIR /backup
 COPY backup-script/* /backup/
 RUN npm install
 
-CMD ["pm2-runtime", "start", "backup.js", "--cron", "* * * * *"]
+CMD ["pm2-runtime", "start", "backup.js", "--cron", "*/5 * * * *"]
 
 EXPOSE 3306
