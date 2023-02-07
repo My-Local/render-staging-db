@@ -19,8 +19,8 @@
   "homepage": "https://github.com/My-Local/render-staging-db#readme",
   "dependencies": {
     "aws-sdk": "^2.1310.0",
-    "dotenv": "^16.0.3",
     "env-var": "^7.3.0",
+    "node-schedule": "^2.1.1",
     "s3-stream-upload": "^2.0.2"
   }
 }

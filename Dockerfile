@@ -2,6 +2,7 @@
 # https://hub.docker.com/r/mysql/mysql-server/tags/
 FROM mysql:8-debian
 
+# add node
 RUN groupadd --gid 1000 node \
   && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
 
@@ -44,15 +45,22 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
   && node --version \
   && npm --version
 
+# add pm2
 RUN npm install pm2 -g
 
+# copy mysql conf
 COPY config/user.cnf /etc/mysql/my.cnf
 
+# copy backup script
 RUN mkdir /backup
 WORKDIR /backup
 COPY backup-script/* /backup/
 RUN npm install
 
-CMD ["pm2-runtime", "start", "backup.js", "--cron", "*/5 * * * *"]
+# start container
+WORKDIR /
+COPY run.sh .
+RUN ["chmod", "+x", "run.sh"]
+CMD ["/bin/bash","-c","./run.sh"]
 
 EXPOSE 3306

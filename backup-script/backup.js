@@ -1,9 +1,8 @@
-require("dotenv").config()
-
 const { spawn } = require("node:child_process")
 const { createGzip } = require("node:zlib")
 const { pipeline } = require("node:stream")
 const { promisify } = require("node:util")
+const schedule = require("node-schedule")
 
 const s3Upload = require("s3-stream-upload")
 const S3 = require("aws-sdk").S3
@@ -19,9 +18,9 @@ const config = {
     bucketRegion: env.get("AWS_BUCKET_REGION").required().asString(),
   },
   db: {
-    user: env.get("DB_USER").required().asString(),
-    password: env.get("DB_PASSWORD").required().asString(),
-    database: env.get("DB_DATABASE").required().asString(),
+    user: env.get("MYSQL_USER").required().asString(),
+    password: env.get("MYSQL_PASSWORD").required().asString(),
+    database: env.get("MYSQL_DATABASE").required().asString(),
   },
 }
 
@@ -35,13 +34,16 @@ const s3Config = new S3({
 
 async function mysqlBackup() {
   const mysqldump = spawn("mysqldump", [
-    "-u",
+    `-u`,
     config.db.user,
-    "-p" + config.db.password,
+    `--password=${config.db.password}`,
     config.db.database,
   ])
+  mysqldump.on("error", function (error) {
+    throw new Error(error)
+  })
   const gzip = createGzip()
-  const dumpFileName = "mysql-backup-" + new Date().toISOString() + ".sql.gzip"
+  const dumpFileName = "mysql-backup-" + new Date().toISOString() + ".sql.gz"
   const upload = s3Upload(s3Config, {
     Bucket: config.aws.bucketName,
     Key: dumpFileName,
@@ -50,11 +52,15 @@ async function mysqlBackup() {
   return pipe(mysqldump.stdout, gzip, upload)
 }
 
-mysqlBackup()
-  .then(function () {
-    console.log("Backup complete")
-  })
-  .catch(function (err) {
-    console.error("Backup failed", err)
-    process.exit(1)
-  })
+schedule.scheduleJob('0 * * * *', async function() {
+  mysqlBackup()
+    .then(function () {
+      console.log("Backup complete")
+      process.exit(0)
+    })
+    .catch(function (err) {
+      console.error("Backup failed", err)
+      process.exit(1)
+    })
+});
+

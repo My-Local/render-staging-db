@@ -7,3 +7,6 @@ bind-address=0.0.0.0
 
 # increase buffer size
 sort_buffer_size=4M
+
+# no secure system
+secure-file-priv=NULL
