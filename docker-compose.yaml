@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  db:
+    platform: linux/amd64
+    build: .
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: mylocal
+      MYSQL_USER: mylocal
+      MYSQL_PASSWORD: password
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_BUCKET_NAME: ${AWS_BUCKET_NAME}
+      AWS_BUCKET_REGION: ${AWS_BUCKET_REGION}
+    volumes:
+      - ./backup-script:/backup
+      - './data:/var/tmp/data'
+      - 'render-backup:/var/lib/mysql'
+
+volumes:
+  render-backup:
+    driver: local
