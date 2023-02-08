@@ -22,6 +22,9 @@ const config = {
     password: env.get("MYSQL_PASSWORD").required().asString(),
     database: env.get("MYSQL_DATABASE").required().asString(),
   },
+  node: {
+    environment: env.get("NODE_ENV").asString(),
+  },
 }
 
 const s3Config = new S3({
@@ -52,15 +55,19 @@ async function mysqlBackup() {
   return pipe(mysqldump.stdout, gzip, upload)
 }
 
-schedule.scheduleJob('0 * * * *', async function() {
-  mysqlBackup()
-    .then(function () {
-      console.log("Backup complete")
-      process.exit(0)
-    })
-    .catch(function (err) {
-      console.error("Backup failed", err)
-      process.exit(1)
-    })
-});
-
+schedule.scheduleJob("0 * * * *", async function () {
+  if (config.node.environment === "production") {
+    mysqlBackup()
+      .then(function () {
+        console.log("Backup complete")
+        process.exit(0)
+      })
+      .catch(function (err) {
+        console.error("Backup failed", err)
+        process.exit(1)
+      })
+  } else {
+    console.log("Backup is only enabled in production")
+    process.exit(0)
+  }
+})
